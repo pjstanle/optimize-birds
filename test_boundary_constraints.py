@@ -64,10 +64,6 @@ def create_eagle_exclusions(filename, threshold):
                                       (side_x[i+1],side_y[j+1]),(side_x[i],side_y[j+1])))
                 excluded_polygons = excluded_polygons.union(added_poly)
 
-    outer_poly = Polygon(((-5000,-5000),(11000,-5000),(11000,11000),(-5000,11000)))
-    inner_poly = Polygon(((0,0),(6000,0),(6000,6000),(0,6000)))
-    boundary_poly = outer_poly.difference(inner_poly)
-    excluded_polygons = excluded_polygons.union(boundary_poly)
     if type(excluded_polygons) == Polygon:
         excluded_polygons = MultiPolygon([excluded_polygons])
 
@@ -100,11 +96,6 @@ def objective_function(x):
     turbine_x = x["turbine_x"]*scale_x
     turbine_y = x["turbine_y"]*scale_y
 
-    nturbs = len(turbine_x)
-    boundary_constraint = np.zeros(nturbs)
-    for i in range(nturbs):
-        boundary_constraint[i] = calc_boundary_constraint(turbine_x[i], turbine_y[i])
-
     fi.reinitialize(layout=[turbine_x,turbine_y])
     fi.calculate_wake()
     farm_power = fi.get_farm_power()
@@ -113,12 +104,11 @@ def objective_function(x):
     funcs = {}
     funcs["obj"] = -np.sum(farm_power)/start_power
     funcs["spacing_con"] = np.min(spacing)
-    funcs["boundary_con"] = boundary_constraint
 
     return funcs, fail
 
 
-def calc_boundary_constraint(x, y):
+def boundary_constraint(x, y):
 
         global excluded_polygons
 
@@ -166,112 +156,122 @@ if __name__=="__main__":
     het_map_2d = generate_heterogeneous_wind_map(flow_u, flow_x, flow_y)
     fi = FlorisInterface("inputs/birds_siting.yaml", het_map=het_map_2d)
 
-    minx = np.min(flow_x)+100.0
-    maxx = np.max(flow_x)-100.0
-    miny = np.min(flow_y)+100.0
-    maxy = np.max(flow_y)-100.0
 
-    start_x = np.array([-400.        , 1340.74743765, 1640.00619292, 2570.77817285,
-       3030.2188474 , 5480.        , 5480.        , -400.        ,
-        706.94273508, 1769.98067136, 2086.85995351, 3789.45326298,
-       4589.9999132 , 5480.        , -400.        ,  570.00805934,
-       1740.74169182, 2259.99907449, 3260.00003451, 4580.00142738,
-       5480.        , -400.        ,   60.00462569, 1809.99457246,
-       2699.99769248, 3535.14306046, 4490.05819115, 5480.        ,
-       -400.        ,  539.99948882, 1560.00025661, 3060.00005273,
-       3410.00121144, 3670.00888214, 5480.        , -399.9998083 ,
-        580.00052014, 2066.80086422, 2359.93937375, 3610.00299294,
-       4360.00059864, 5480.        , -400.        , 1460.00023172,
-       1918.39138441, 2208.93642925, 3000.00662206, 3969.99703028,
-       5480.        ])
-    start_y = np.array([-3400.        , -3400.        , -3150.76464536, -3400.        ,
-       -3269.996863  , -3330.00564251, -2986.62229316, -2639.25090319,
-       -1901.7978694 , -2788.83912134, -2439.14332026, -2054.06047365,
-       -2299.24766487, -2678.62177524, -1458.61874277, -1339.25654382,
-       -1789.99264804, -1680.75424662,  -819.25031856, -1460.73526356,
-       -1309.23671135,  -113.08877267,  -220.74756859,  -359.24983197,
-         109.24689883,  -680.82941535,  -558.27775795,  -259.26837141,
-         200.74984294,   450.74948686,   570.75011145,   469.04069253,
-         697.32305545,   350.75133144,   949.21580204,  1209.23883688,
-        1409.25497851,  1593.26112492,  1687.78014592,  1170.75002127,
-        1819.99972556,  1419.21485413,  2480.        ,  2369.21652038,
-        2076.85836972,  1974.63064575,  2216.52247179,  2480.        ,
-        2480.        ])
-    
-    start_x = start_x - np.min(start_x)
-    start_y = start_y - np.min(start_y)
+    # xs = np.linspace(np.min(flow_x)+100.0,np.max(flow_x)-100.0,10)
+    # ys = np.linspace(np.min(flow_y)+100.0,np.max(flow_y)-100.0,10)
+    # start_x, start_y = np.meshgrid(xs, ys)
+    # start_x = np.ndarray.flatten(start_x)
+    # start_y = np.ndarray.flatten(start_y)
 
-    fi.reinitialize(layout=[start_x,start_y])
-    fi.calculate_wake()
-    start_power = np.sum(fi.get_farm_power())
+    # fi.reinitialize(layout=[start_x,start_y])
+    # fi.calculate_wake()
+    # start_power = np.sum(fi.get_farm_power())
 
-    optProb = pyoptsparse.Optimization("optimize baseline", objective_function)
+    # optProb = pyoptsparse.Optimization("optimize baseline", objective_function)
 
-    optProb.addVarGroup("turbine_x", len(start_x), type="c", value=start_x/scale_x, upper=maxx/scale_x, lower=minx/scale_x)
-    optProb.addVarGroup("turbine_y", len(start_y), type="c", value=start_y/scale_y, upper=maxy/scale_y, lower=miny/scale_y)
+    # optProb.addVarGroup("turbine_x", len(start_x), type="c", value=start_x/scale_x, upper=np.max(start_x)/scale_x, lower=np.min(start_x)/scale_x)
+    # optProb.addVarGroup("turbine_y", len(start_y), type="c", value=start_y/scale_y, upper=np.max(start_y)/scale_y, lower=np.min(start_y)/scale_y)
 
-    rotor_diameter = 77.0
-    min_spacing = 4.0
-    thresh = 0.15
-    excluded_polygons = create_eagle_exclusions("eagle_probability_data.npy", thresh)
-    # full_data = np.load("eagle_probability_data.npy")
-    # x_index = 710
-    # y_index = 364
-    # excluded_data = full_data[x_index:x_index+120,y_index:y_index+120]
-    # x = np.ndarray.flatten(excluded_data)
-    # print("50: ", np.percentile(x,50))
-    # print("75: ", np.percentile(x,25))
-    # print("80: ", np.percentile(x,20))
-    # print("90: ", np.percentile(x,15))
-    # print("95: ", np.percentile(x,10))
-    optProb.addCon("spacing_con",lower=min_spacing*rotor_diameter)
-    optProb.addConGroup("boundary_con",len(start_x),lower=0.0)
+    # rotor_diameter = 77.0
+    # min_spacing = 4.0
+    # optProb.addCon("spacing_con",lower=min_spacing*rotor_diameter)
 
-    optProb.addObj("obj")
+    # optProb.addObj("obj")
 
-    optimize = pyoptsparse.SNOPT()
+    # optimize = pyoptsparse.SNOPT()
+
     # optimize.setOption("MAXIT",value=5)
     # optimize.setOption("ACC",value=1E-5)
-    optimize.setOption("Major iterations limit", value=50)
+    # optimize.setOption("Major iterations limit", value=5)
 
-    start_opt = time.time()
-    # solution = optimize(optProb,sens="FD", storeHistory="run7x7_0.5.hst")
-    solution = optimize(optProb,sens="FD", storeHistory="run7x7_0.15.hst")
-    optimization_time = time.time()-start_opt
-    print("optimization time: ", time.time()-start_opt)
-    print("end optimization")
+    # start_opt = time.time()
+    # solution = optimize(optProb,sens="FD", storeHistory="run10x10.hst")
+    # optimization_time = time.time()-start_opt
+    # print("optimization time: ", time.time()-start_opt)
+    # print("end optimization")
 
-    # END RESULTS
-    opt_DVs = solution.getDVs()
-    opt_x = opt_DVs["turbine_x"] * scale_x
-    opt_y = opt_DVs["turbine_y"] * scale_y
+    # # END RESULTS
+    # opt_DVs = solution.getDVs()
+    # opt_x = opt_DVs["turbine_x"] * scale_x
+    # opt_y = opt_DVs["turbine_y"] * scale_y
 
-    print("turbine_x = np." + "%s"%repr(opt_x))
-    print("turbine_y = np." + "%s"%repr(opt_y))
+    # print("turbine_x = np." + "%s"%repr(opt_x))
+    # print("turbine_y = np." + "%s"%repr(opt_y))
 
+    opt_x = [0.0]
+    opt_y = [0.0]
     fi.reinitialize(layout=[opt_x,opt_y])
     fi.calculate_wake()
     farm_power = fi.get_farm_power()
 
-    print("optimized power: ", np.sum(farm_power))
-    print("optimized objective: ", -np.sum(farm_power)/start_power)
+    # print("optimized power: ", np.sum(farm_power))
+    # print("optimized objective: ", -np.sum(farm_power)/start_power)
 
 
-    # # Using the FlorisInterface functions for generating plots, run FLORIS
-    # # and extract 2D planes of data.
+    # Using the FlorisInterface functions for generating plots, run FLORIS
+    # and extract 2D planes of data.
     horizontal_plane_2d = fi.calculate_horizontal_plane(80.0, x_bounds=(np.min(flow_x),np.max(flow_x)),y_bounds=(np.min(flow_y),np.max(flow_y)),x_resolution=200, y_resolution=100)
 
-    # # Create the plots
+    # Create the plots
 
-    # # plot resource
+    # plot resource
     # ax = plt.gca()
     # cm = ax.pcolormesh(xx,yy,flow_data,shading='auto')
 
-    # # plot flow field 
-    plt.figure(1)
-    ax1 = plt.gca()
-    visualize_cut_plane(horizontal_plane_2d, ax=ax1, title="farm flow field", color_bar=True)
-    ax1.set_xlabel('x'); ax1.set_ylabel('y')
+    # plot flow field 
+    # plt.figure(1)
+    # ax1 = plt.gca()
+    # visualize_cut_plane(horizontal_plane_2d, ax=ax1, title="farm flow field", color_bar=True)
+    # ax1.set_xlabel('x'); ax1.set_ylabel('y')
 
-    plot_poly(excluded_polygons, ax=ax1)
+    # plt.show()
+
+    # flow field
+    lat0 = 42.944092
+    lat = 42.944092
+    long = -105.773689
+
+    r = 6371230.0
+    x_flow = r*np.deg2rad(long) * np.cos(np.deg2rad(lat0))
+    y_flow = r*np.deg2rad(lat)
+
+    # eagle data
+    # (-106.21, 42.78)
+    lat = 42.78
+    long = -106.21
+    x_eagle = r*np.deg2rad(long) * np.cos(np.deg2rad(lat0))
+    y_eagle = r*np.deg2rad(lat)
+
+
+    dx = x_flow - x_eagle
+    dy = y_flow - y_eagle
+    x_index = int(np.floor(dx/50000 * 1000))
+    y_index = int(np.floor(dy/50000 * 1000))
+
+
+    full_data = np.load("eagle_probability_data.npy")
+    excluded_polygons = full_data[x_index:x_index+120,y_index:y_index+120]
+    
+    plt.figure(1)
+    plt.imshow(excluded_polygons, origin="lower")
+    # plt.title("excluded data")
+
+    plt.figure(2)
+    plt.imshow(full_data, origin="lower")
+    # plt.title("excluded data")
+
+    # plt.figure(3)
+    # thresh = 0.2
+    # a = np.copy(excluded_polygons)
+    # a[a < thresh] = 0.0
+    # a[a >= thresh] = 1.0
+    # plt.imshow(a, origin="lower")
+    # plt.title("thresh = %s"%thresh)
+
+    # excluded_polygons = create_eagle_exclusions("eagle_probability_data.npy", thresh)
+    # print("boundary constraint: ", boundary_constraint(100.0,100.0))
+    # print("boundary constraint: ", boundary_constraint(475.0,1350.0))
+    # print("boundary constraint: ", boundary_constraint(2500.0,3200.0))
+    # print("boundary constraint: ", boundary_constraint(2000.0,5600.0))
+    # plot_poly(excluded_polygons, ax=ax1)
     plt.show()

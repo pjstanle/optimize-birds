@@ -49,6 +49,7 @@ def create_eagle_exclusions(filename, threshold):
     # load in eagle data
     full_data = np.load(filename)
     excluded_data = full_data[x_index:x_index+120,y_index:y_index+120]
+    print(excluded_data)
     excluded_data[excluded_data < threshold] = 0
     excluded_data[excluded_data >= threshold] = 1
 
@@ -128,8 +129,9 @@ if __name__=="__main__":
     fi = FlorisInterface("inputs/birds_siting.yaml", het_map=het_map_2d)
 
     rotor_diameter = 77.0
-    thresh = 0.3
-    excluded_polygons = create_eagle_exclusions("eagle_probability_data.npy", thresh)
+    thresh = 0.00001
+    # excluded_polygons = create_eagle_exclusions("eagle_probability_data.npy", thresh)
+    excluded_polygons = create_eagle_exclusions("inputs/summary_presence.npy", thresh)
 
     # BASELINE
     # p = 27881025.235700626
@@ -298,5 +300,5 @@ if __name__=="__main__":
     plot_turbines(turbine_x, turbine_y, rotor_diameter/2.0, ax=ax1)
     plt.xlim(0,6000)
     plt.ylim(0,6000)
-    plt.savefig("thresh0.3.pdf", transparent=True)
+    # plt.savefig("thresh0.3.pdf", transparent=True)
     plt.show()
